@@ -1,6 +1,22 @@
 # Tamil-songs-search-engine-using-ElasticSearch
 
-## Sample JSON data of a song
+This repo contains 4216 songs data scraped from https://www.tamilpaa.com and stored at ```scraped_lyrics.txt``` file. Some of the metadata such as ```"இசையமைப்பாளர்", "நடிகர்கள்", "பாடியவர்கள்"``` are in English. ```web_scraping.py``` is used to scrap the data.
+
+## Sample JSON data of scraped song
+```
+{
+  "திரைப்படம்": "என்னை அறிந்தால்",
+  "பாடல்_பெயர்": "அதாரு அதார",
+  "இசையமைப்பாளர்": "Harris Jayaraj",
+  "வருடம்": "2015",
+  "நடிகர்கள்": "Ajith Kumar, Anushka Shetty, Trisha Krishnan",
+  "பாடியவர்கள்": "Gaana Bala, Vijay Prakash",
+  "பாடல்வரிகள்": "வா ராஜா வா வா அட இதான் ஒன் டாவா\nஇங்க எலாருக்கும் நோவா நெஞ்சு வலிக்குது ஸ்லோவா\nவா ராஜா வா வா அட இதான் ஒன் டாவா\nஇங்க எலாருக்கும் நோவா நெஞ்சு வலிக்குது ஸ்லோவா\nஆனது ஆச்சு நம்ம கைய மீறி போச்சு\nஅடி ஏன் வெட்டி பேச்சு ரொம்ப சோக்கா கீது மேட்ச்சு\nலுங்கியத்தான் தூக்கி கட்டு டஸ்டு படுது\nசேலையத்தான் ஏத்தி கட்டு ஹிப்பு தெரிது\nலுங்கியத்தான் தூக்கி கட்டு டஸ்டு படுது\nசேலையத்தான் ஏத்தி கட்டு ஹிப்பு தெரிது\nமங்கிப்போன மூஞ்சி எல்லாம் டாலடிக்குது\nசொங்கிப்போன நம்ம ஜனம் கூத்தடிக்குது\nஅதாரு அதாரு அதாரு அதாரு\nஉதாறு உதாறு காட்டாதே உதாறு\nஅதாரு அதாரு அதாரு அதாரு\nஉதாறு உதாறு காட்டாதே உதாறு\nஎல்லாமே இனி மேல் நல்லாதான் நடக்கும்\nபட்டாசும் சும்மாவே கொளுத்தாம வெடிக்கும்\nஅதாரு அதாரு அதாரு அதாரு\nஉதாறு உதாறு காட்டாதே உதாறு\nஎல்லாமே இனி மேல் நல்லாதான் நடக்கும்\nபட்டாசும் சும்மாவே கொளுத்தாம வெடிக்கும்\nவாச மல்லி வாசம் வீச வாசல் வரியா\nஉன் ஆசை எல்லாம்.. "}
+```
+
+Randomly selected 500 songs data are fully translated to Tamil and extra metadata such as ```"மதிப்பீடு", "வகை", "கிளிக்குகள்"``` are added to improve the quality of the search and stored as ```processed_lyrics.txt``` file. ```preprocess-finalize.py``` is used to produce these JSON data.
+
+## Sample JSON data of a processed song
 ```
 {
   "திரைப்படம்": "சகோ",
@@ -16,12 +32,14 @@
 }
 ```
 
+Bulk API format of those 500 songs are stored as ```processed_lyrics_bulk_api.txt``` file
 
+The following Query DSL are supported for all the diiferent types of user queries.
 
-## Kibana queries
+##  Query DSL for ElasticSearch search engine
 
  ```
- # deleting index
+ # deleting an index(database)
 DELETE /songs_db
 
 
@@ -32,7 +50,7 @@ DELETE /songs_db
 ##########################################################################################
 
 
-# custom stop words and stemming
+# custom stop words and stemming new analyzer along with the standard analyzer
 PUT /songs_db/
 {
         "settings": {
@@ -71,6 +89,31 @@ POST /_bulk
 { "index" : { "_index" : "songs_db", "_type" : "songs", "_id" :2 } }
 {"திரைப்படம்": " சாஹோ ", "பாடலாசிரியர்": " விக்னேஸ் சிவன் ", "இசையமைப்பாளர்": "M. ஜிப்ரான் ", "பாடல்": "Bad Boy", "வருடம்": "2019", "பாடியவர்கள்": " பென்னி டயால் ,சுனிதா சாரதி ", "பாடல்வரிகள்": "Coming Soon", "மதிப்பீடு": "2", "வகை": "குத்து பாடல்"}
 
+# Using custom indexing for search
+# ஹரிஸ் ஜெயராஜ் songs spelling mistake
+GET /songs_db/songs/_search
+{
+    "query": {
+        "multi_match" : {
+            "query" : "ஹஷ்ரி ஜெராயஜ்",
+            "fuzziness": "AUTO",
+	    "analyzer": "my_analyzer"
+        }
+    }
+}
+
+# Using standard indexing for search
+# ஹரிஸ் ஜெயராஜ் songs spelling mistake
+GET /songs_db/songs/_search
+{
+    "query": {
+        "multi_match" : {
+            "query" : "ஹஷ்ரி ஜெராயஜ்",
+            "fuzziness": "AUTO",
+	    "analyzer": "standard"
+        }
+    }
+}
 
 # top 10 songs from 1990 to 2020 using கிளிக்குகள்"
 GET /songs_db/songs/_search
@@ -175,16 +218,6 @@ GET /songs_db/songs/_search
     }
 }
 
-# ஹரிஸ் ஜெயராஜ் songs spelling mistake
-GET /songs_db/songs/_search
-{
-    "query": {
-        "multi_match" : {
-            "query" : "ஹஷ்ரி ஜெராயஜ்",
-            "fuzziness": "AUTO"
-        }
-    }
-}
 
 # search by lyrics spelling mistake
 GET /songs_db/_search
@@ -244,6 +277,7 @@ GET /songs_db/_search
   }
 }
 
+# ஏ.ஆர்.ரஹ்மான் இசையமைத்த ஆனால் ஏ.ஆர்.ரஹ்மான் பாடாத குத்துபாடல் or மெல்லிசைபாடல்
 GET /songs_db/_search
 {
   "query": {
@@ -286,7 +320,7 @@ GET /songs_db/_search
   }
 }
 
-
+# ஏ.ஆர்.ரஹ்மான் இசையமைத்த ஆனால் ஏ.ஆர்.ரஹ்மான் பாடாத 2009 இற்கு பிந்திய குத்துபாடல் or மெல்லிசைபாடல்
 GET /songs_db/_search
 {
   "query": {
@@ -314,6 +348,7 @@ GET /songs_db/_search
   }
 }
 
+# ஜி.வி.பிரகாஷ்குமார் இசையமைத்த 2008 இற்கு பிந்திய "மெல்லிசைபாடல்" output score is not calculated for filter conditions.
 GET /songs_db/_search
 {
     "query": {
